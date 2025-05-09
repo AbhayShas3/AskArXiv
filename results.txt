@@ -1,0 +1,51 @@
+Question: How can social annotations be exploited for automatic resource discovery?
+
+Answer:
+Social annotations can be exploited for automatic resource discovery in several ways, as discussed in the provided papers. Here are some key insights:
+
+1. Modeling user annotation behavior: Papers 1 and 2 provide a probabilistic model of user annotation behavior in social bookmarking systems like del.icio.us. This model can be used to automatically find resources relevant to a particular information domain by inferring topics and interests from the annotations contributed by users.
+2. Exploiting hierarchical relations: Papers 3 and 4 discuss the use of hierarchical relations in social media sites like Flickr to construct folksonomies. These relations can be used to generate a common folksonomy that can be exploited for automatic resource discovery.
+3. Personalizing search results: Paper 4 describes a probabilistic model that takes advantage of tag information to discover latent topics contained in search results. This model can be used to personalize search results by finding images on topics that are of interest to the user.
+
+To answer the question "How can social annotations be exploited for automatic resource discovery?", we can combine these insights as follows:
+
+Social annotations can be exploited for automatic resource discovery by modeling user annotation behavior (Papers 1 and 2), constructing folksonomies (Papers 3 and 4), and personalizing search results (Paper 4). By leveraging the rich evidence provided by social annotations, these approaches can help automate the resource discovery task, improve search precision, and provide more relevant search results.
+
+In summary, social annotations can be exploited for automatic resource discovery by using probabilistic models to infer topics and interests from user annotations, constructing folksonomies to represent hierarchical relations, and personalizing search results based on the user's interests.
+
+Retrieved Papers:
+[1] Exploiting Social Annotation for Automatic Resource Discovery
+    Authors: Anon Plangprasopchok, Kristina Lerman
+    Year: 2016
+    Similarity: 0.5976
+
+[2] Modeling Social Annotation: a Bayesian Approach
+    Authors: Anon Plangprasopchok, Kristina Lerman
+    Year: 2010
+    Similarity: 0.5163
+
+[3] Constructing Folksonomies from User-specified Relations on Flickr
+    Authors: Anon Plangprasopchok, Kristina Lerman
+    Year: 2008
+    Similarity: 0.5145
+
+[4] Personalizing Image Search Results on Flickr
+    Authors: Kristina Lerman, Anon Plangprasopchok, Chio Wong
+    Year: 2007
+    Similarity: 0.4911
+
+[5] International Standard for a Linguistic Annotation Framework
+    Authors: Laurent Romary, Nancy Ide
+    Year: 2007
+    Similarity: 0.4803
+
+Evaluation Metrics:
+Retrieved papers: 5
+Top similarity score: 0.5976
+Average similarity: 0.5200
+Number of citations: 0
+Citation ratio: 0.0000
+Answer length: 274 words
+
+--------------------------------------------------
+
