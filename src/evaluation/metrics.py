@@ -10,7 +10,6 @@ from nltk.translate.bleu_score import sentence_bleu
 from nltk.tokenize import word_tokenize
 import nltk
 
-# Download required NLTK data (run once)
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
@@ -40,14 +39,12 @@ class RAGEvaluator:
         """
         metrics = {}
         
-        # If we don't have ground truth, just return basic stats
         if relevant_paper_ids is None:
             metrics['num_retrieved'] = len(retrieved_papers)
             metrics['top_similarity'] = retrieved_papers['similarity'].iloc[0] if len(retrieved_papers) > 0 else 0
             metrics['avg_similarity'] = retrieved_papers['similarity'].mean() if len(retrieved_papers) > 0 else 0
             return metrics
         
-        # Calculate precision@k, recall@k
         for k in k_values:
             if k <= len(retrieved_papers):
                 top_k_ids = retrieved_papers['id'].iloc[:k].tolist()
@@ -59,13 +56,11 @@ class RAGEvaluator:
                 metrics[f'precision@{k}'] = precision_k
                 metrics[f'recall@{k}'] = recall_k
                 
-                # F1 score
                 if precision_k + recall_k > 0:
                     metrics[f'f1@{k}'] = 2 * (precision_k * recall_k) / (precision_k + recall_k)
                 else:
                     metrics[f'f1@{k}'] = 0
         
-        # Calculate MRR (Mean Reciprocal Rank)
         first_relevant_rank = None
         for i, paper_id in enumerate(retrieved_papers['id']):
             if paper_id in relevant_paper_ids:
@@ -74,13 +69,11 @@ class RAGEvaluator:
         
         metrics['mrr'] = 1.0 / first_relevant_rank if first_relevant_rank else 0
         
-        # Calculate nDCG (Normalized Discounted Cumulative Gain)
         relevance_scores = [1.0 if paper_id in relevant_paper_ids else 0.0 
                             for paper_id in retrieved_papers['id']]
         
         dcg = sum((2**rel - 1) / np.log2(i + 2) for i, rel in enumerate(relevance_scores))
         
-        # Ideal DCG - relevant documents ranked first
         ideal_relevance = sorted(relevance_scores, reverse=True)
         idcg = sum((2**rel - 1) / np.log2(i + 2) for i, rel in enumerate(ideal_relevance))
         
@@ -90,20 +83,26 @@ class RAGEvaluator:
     
     def extract_citations(self, answer):
         """
-        Extract citations from the answer.
+        Extract citations from the answer using proper academic format.
         
         Args:
             answer: Generated answer text
             
         Returns:
-            List of citations
+            List of citation dictionaries with author, title, year
         """
-        # Pattern to match citations like [1], [2], etc.
-        citation_pattern = r'\[(\d+)\]'
-        citations = re.findall(citation_pattern, answer)
+        citation_pattern = r'\[([^,]+),\s*"([^"]+)",\s*(\d{4})\]'
+        raw_citations = re.findall(citation_pattern, answer)
         
-        # Convert to integers
-        return [int(c) for c in citations]
+        citations = []
+        for authors, title, year in raw_citations:
+            citations.append({
+                "authors": authors.strip(),
+                "title": title.strip(),
+                "year": year.strip()
+            })
+        
+        return citations
     
     def evaluate_answer(self, answer, query, retrieved_papers, ground_truth=None):
         """
@@ -120,34 +119,64 @@ class RAGEvaluator:
         """
         metrics = {}
         
-        # Citation metrics
         citations = self.extract_citations(answer)
         metrics['num_citations'] = len(citations)
         metrics['citation_ratio'] = len(citations) / len(retrieved_papers) if len(retrieved_papers) > 0 else 0
         
-        # Length metrics
         metrics['answer_length'] = len(answer.split())
         
-        # Citation coverage - do citations reference papers from retrieved set?
         if len(citations) > 0:
-            valid_citations = [c for c in citations if 1 <= c <= len(retrieved_papers)]
-            metrics['valid_citation_ratio'] = len(valid_citations) / len(citations)
+            valid_citations = 0
+            for citation in citations:
+                for i, paper in retrieved_papers.iterrows():
+                    paper_title = paper['title'].lower()
+                    citation_title = citation['title'].lower()
+                    
+                   
+                    if (paper_title in citation_title or citation_title in paper_title or 
+                        self._similarity(paper_title, citation_title) > 0.8):
+                        valid_citations += 1
+                        break
+            
+            metrics['valid_citation_ratio'] = valid_citations / len(citations)
         else:
             metrics['valid_citation_ratio'] = 0
         
-        # Calculate BLEU score if ground truth is available
         if ground_truth:
-            reference = [word_tokenize(ground_truth.lower())]
-            candidate = word_tokenize(answer.lower())
-            metrics['bleu_score'] = sentence_bleu(reference, candidate)
+            try:
+                from nltk.translate.bleu_score import sentence_bleu
+                from nltk.tokenize import word_tokenize
+                
+                reference = [word_tokenize(ground_truth.lower())]
+                candidate = word_tokenize(answer.lower())
+                metrics['bleu_score'] = sentence_bleu(reference, candidate)
+            except ImportError:
+                metrics['bleu_score'] = 0
         
-        # Semantic similarity between query and answer
-        if self.embedding_model:
-            query_emb = self.embedding_model.encode([query])[0]
-            answer_emb = self.embedding_model.encode([answer])[0]
-            metrics['query_answer_similarity'] = cosine_similarity([query_emb], [answer_emb])[0][0]
+        if hasattr(self, 'embedding_model') and self.embedding_model:
+            try:
+                from sklearn.metrics.pairwise import cosine_similarity
+                
+                query_emb = self.embedding_model.encode([query])[0]
+                answer_emb = self.embedding_model.encode([answer])[0]
+                metrics['query_answer_similarity'] = cosine_similarity([query_emb], [answer_emb])[0][0]
+            except:
+                metrics['query_answer_similarity'] = 0
         
         return metrics
+
+    def _similarity(self, str1, str2):
+        """Simple string similarity function for citation matching"""
+        words1 = set(str1.lower().split())
+        words2 = set(str2.lower().split())
+        
+        if not words1 or not words2:
+            return 0.0
+        
+        intersection = words1.intersection(words2)
+        union = words1.union(words2)
+        
+        return len(intersection) / len(union)
     
     def evaluate_overall(self, query, answer, retrieved_papers, relevant_paper_ids=None, ground_truth=None):
         """
@@ -166,7 +195,6 @@ class RAGEvaluator:
         retrieval_metrics = self.evaluate_retrieval(retrieved_papers, relevant_paper_ids)
         answer_metrics = self.evaluate_answer(answer, query, retrieved_papers, ground_truth)
         
-        # Combine metrics
         metrics = {
             'retrieval': retrieval_metrics,
             'answer': answer_metrics
@@ -175,17 +203,15 @@ class RAGEvaluator:
         return metrics
 
 
-# Example benchmark for testing
 BENCHMARK_QUERIES = [
     {
         'query': 'How do neural networks handle ordinal regression?',
-        'relevant_paper_ids': ['0704.1028'],  # ID of "A neural network approach to ordinal regression"
+        'relevant_paper_ids': ['0704.1028'],  
         'ground_truth': 'Neural networks handle ordinal regression by adapting traditional neural networks to learn ordinal categories. The NNRank method is a generalization of the perceptron method for ordinal regression that outperforms standard neural network classification methods.'
     },
     {
         'query': 'What techniques are used for Arabic speech recognition?',
-        'relevant_paper_ids': ['0704.2083', '0704.2201'],  # IDs of Arabic speech recognition papers
+        'relevant_paper_ids': ['0704.2083', '0704.2201'], 
         'ground_truth': 'Arabic speech recognition can be implemented using the CMU Sphinx-4 system, which is based on discrete Hidden Markov Models (HMMs). The system can be adapted to Arabic language by making specific changes to the acoustic model.'
     }
-    # Add more benchmark queries as needed
 ]

@@ -1,8 +1,3 @@
-# src/evaluation/run_evaluation.py
-"""
-Script to run evaluation of the RAG system.
-"""
-
 import argparse
 import pandas as pd
 import json

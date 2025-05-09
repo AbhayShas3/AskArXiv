@@ -1,8 +1,3 @@
-# src/ui/cli.py
-"""
-Command-line interface for the RAG system with real-time evaluation.
-"""
-
 import argparse
 import pandas as pd
 from src.retrieval.rag_system import RAGSystem
@@ -36,7 +31,12 @@ def display_metrics(answer, retrieved_papers, query):
     print(f"  Number of citations: {metrics['answer'].get('num_citations', 0)}")
     print(f"  Citation ratio: {metrics['answer'].get('citation_ratio', 0):.4f}")
     
-    print(f"  Answer length: {metrics['answer'].get('answer_length', 0)} words")
+    if citations:
+        print("\nCitations found:")
+        for i, citation in enumerate(citations):
+            print(f"  {i+1}. [{citation['authors']}, \"{citation['title']}\", {citation['year']}]")
+    
+    print(f"\n  Answer length: {metrics['answer'].get('answer_length', 0)} words")
     
     if len(citations) > 0:
         print(f"  Valid citation ratio: {metrics['answer'].get('valid_citation_ratio', 0):.4f}")
@@ -56,7 +56,6 @@ def main():
     
     args = parser.parse_args()
     
-    # Initialize the RAG system
     rag_system = RAGSystem(
         vector_db_path=args.vector_db,
         embedding_model_name=args.embedding_model,
